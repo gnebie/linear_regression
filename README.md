@@ -15,9 +15,9 @@ import matplotlib.pyplot as plt
 
 ## Linear regression :
 
-** The linear regression is a supervised Learning algorithm.**
+**The linear regression is a supervised Learning algorithm.**
 
-** It goal is to find a regression line (or a curve with multiple datas) to predict the real-valued output**
+**It goal is to find a regression line (or a curve with multiple datas) to predict the real-valued output**
 
  size (x) | price (y)
  ---      |---
@@ -29,14 +29,20 @@ training set size (m) |
 --                    |
 3  |
 
-** yi = h(xi)**
+$$y_i = h(x_i)$$
 
-Linear regression function :
-** h0(x) = \theta 0 + \theta 1 * x **
+Linear regression function : $h\theta(x) = \theta_0 + \theta_1 * x$
 
 ## cost function
 
 To calculate the x tetras a cost function J is used
-```
 
-```
+$$J(\theta 0, \theta 1) = 1 / 2m {\sum_{i=1}^{m} (h_\theta(x^{(i)} ) - y^{(i)}) ^2 }$$
+
+
+
+#### exemple
+When $a \ne 0$, there are two solutions to \(ax^2 + bx + c = 0\) and they are
+$$x = {-b \pm \sqrt{b^2-4ac} \over 2a}.$$
+
+$$\cos()$$
