@@ -31,18 +31,46 @@ training set size (m) |
 
 $$y_i = h(x_i)$$
 
-Linear regression function : $h\theta(x) = \theta_0 + \theta_1 * x$
+Linear regression function : $h_\theta(x) = \theta_0 + \theta_1 * x$
 
 ## cost function
 
 To calculate the x tetras a cost function J is used
 
-$$J(\theta 0, \theta 1) = 1 / 2m {\sum_{i=1}^{m} (h_\theta(x^{(i)} ) - y^{(i)}) ^2 }$$
+$$J(\theta_0, \theta_1) = {1 \over 2m} {\sum_{i=1}^{m} (h_\theta(x^{(i)} ) - y^{(i)}) ^2 }$$
 
+## Goal : minimize J with gradient descent
 
+Formula :
+$$\theta_j := \theta_j - \alpha {\varphi \over \varphi\theta_j}J(\theta_0, \theta_1) $$
+Repeat until convergence and simultaneously update all j (0 - 1)
+* If a is too small the descent will be long
+* If a is to large the descent will diverge
 
-#### exemple
-When $a \ne 0$, there are two solutions to \(ax^2 + bx + c = 0\) and they are
-$$x = {-b \pm \sqrt{b^2-4ac} \over 2a}.$$
+### Linear regression gradient descent
 
-$$\cos()$$
+$$\theta_0 := \theta_0 - \alpha {1 \over m} {\sum_{i=1}^{m} (h_\theta(x^{(i)} ) - y^{(i)}) }
+$$
+$$\theta_1 := \theta_1 - \alpha {1 \over m} {\sum_{i=1}^{m} (h_\theta(x^{(i)} ) - y^{(i)}) . x^{(i)} }$$
+
+### Linear regression gradient descent with multiple values
+
+$x_0 == 1$
+
+Linear regression function : $h_\theta(x) = \theta_0 + \theta_1 * x_1 + ... \theta_n * x_n$
+
+$$\theta_j := \theta_j - \alpha {1 \over m} {\sum_{i=1}^{m} (h_\theta(x^{(i)} ) - y^{(i)}) . x^{(i)} }$$
+
+### tips to improve the datas :
+
+Feature scaling : Get every feature into approximatively e $-1 < x_i < 1$ range
+
+mean normalization :  replace $x_i$ with $x_i - \bar x$ (do not apply for $x_0$)
+
+Declare convvergence when x decreasze than less than $10^{-3}$ in one iteration.
+
+Modify $\alpha$ by $* 3$ or $/ 3$ to find a good value 
+
+### polynomial regression
+
+Copy a x value and give it a new coeficient ($\sqrt x / x^2 / x^3 / ...$) and calculate the new set of values $x_1 = x$ and $x_2 = x^2$
