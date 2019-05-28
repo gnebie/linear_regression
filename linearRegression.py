@@ -12,13 +12,12 @@ NORMALIZE_MIN = 0.0
 NORMALIZE_MAX = 1.0
 NORMALIZE_AVREADGE = (NORMALIZE_MAX - NORMALIZE_MIN) / 2
 
-
 # data goal must be the first colone of a matrice
 
 class linearRegression:
 	def __init__(self, options):
 		self.options =  SHOW_OPTION
-		# self.options =  NORMALIZE | SHOW_OPTION
+		self.options =  NORMALIZE | SHOW_OPTION
 		self.options =  NORMALIZE | FEATURE_SCALING | SHOW_OPTION
 		self.data_test_x = None # matrice
 		self.data_test_y = None # vecteur
@@ -32,18 +31,44 @@ class linearRegression:
 		self.max_X_stop = None
 		self.y = None # vecteur
 		self.training_set_size = 0;
-		self.alpha = 5.5 # nombre
+		self.alpha = 0.50 # nombre
 		self.theta = None # matrice
 		self.y_prime = None # matrice
 
 	def __init_test(self):
-		data_set_values = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100] # matrice
-		data_set_goal = [100, 200, 300, 400, 500, 600, 700, 800, 900, 1000]# vecteur
+		data_set_goal = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100] # vecteur
+		data_set_values1 = [100, 150, 250, 450, 550, 600, 750, 750, 900, 1000]# matrice
+		data_set_values2 = [10, 1500, 250, 450, 590, 100, 750, 750, 900, 1000]# matrice
+		data_set_values3 = [100, 150, 250, 450, 550, 6000, 750, 750, 900, 10000]# matrice
 		datas = []
-		for elem1, elem2 in zip(data_set_values, data_set_goal):
-			# datas.append([elem1, elem2, elem1 / 10])
+		for elem1, elem2, elem3, elem4 in zip(data_set_goal, data_set_values1, data_set_values2, data_set_values3):
+			# datas.append([elem1, elem2, elem1 / 10, elem3, elem4])
 			datas.append([elem1, elem2])
 		return datas
+
+	def augment_datas(self, data_total):
+		new_total = []
+		for datas in data_total:
+			add_datas = []
+			# if square
+			for elem in datas[1:]:
+				print(elem)
+				total = elem * elem
+				add_datas.append(total)
+			# if cube
+			for elem in datas[1:]:
+				add_datas.append(elem * elem * elem)
+			# if convolutionals values
+			i = 0
+			for elem1 in datas[1:]:
+				j = 0
+				for elem2 in datas[1:]:
+					if j != i:
+						add_datas.append(elem1 * elem2)
+					j+= 1
+				i += 1
+			new_total.append(datas + add_datas)
+		return new_total
 
 	def __test_the_values(self, datas):
 		size = len(datas[0])
@@ -94,6 +119,8 @@ class linearRegression:
 			if not elem in datas:
 				datas.append(elem)
 		random.shuffle(datas)
+		# datas = self.augment_datas(datas)
+
 		data_size = len(datas)
 		self.min_X, self.max_X = self.__get_min_max(datas)
 
@@ -152,11 +179,13 @@ class linearRegression:
 
 	def calculate(self):
 		old_cost = self.__cost_function(self.X, self.y)
-		for i in range(400):
+		for i in range(200):
 			self.__gradient_descent()
 			new_cost = self.__cost_function(self.X, self.y)
 			self.y_prime = [ self.__h0_function(x).item(0) for x in self.X ]
 			old_cost = new_cost
+			if i % 10 == 0:
+				self.print_graphe()
 		self.test_set()
 		return
 
@@ -183,23 +212,55 @@ class linearRegression:
 		tmp_theta = []
 		cost_func = self.__cost_function(self.X, self.y)
 		i = 0
-		for theta, x_i in zip( self.theta, self.X):
+		# print("self.theta {0!s} X {1!s}".format(self.theta, self.X.T))
+		for theta, x_i in zip(self.theta, self.X.T):
+			# print("theta {0!s}  x_i {1!s}".format(theta, x_i))
 			i += 1
 			tmp_theta.append(theta - (self.alpha * self.__gradient_descent_square_sum(x_i) / self.training_set_size))
+		# print(tmp_theta)
+		# print(self.__cost_function(self.X, self.y))
+		# time.sleep(1)
+
 		self.theta = tmp_theta
 		return
 
 	def __gradient_descent_square_sum(self, x_i):
 		sum = 0
 		h0 = self.__h0_function(self.X)
-		for hx, y_elem, x_elem in zip(h0, self.y, x_i.T):
+		# print("\n*********************************")
+		# for  in x_i.T:
+		for x_elem, hx, y_elem in zip(x_i.tolist()[0], h0, self.y):
 			sum += (hx - y_elem) * x_elem
+			# print("sum {0!s}  hx {1!s} y {2!s}  x {3!s} ".format(sum, hx, y_elem, x_elem))
+		# print("sum {0!s}  h0 {1!s} y_ {2!s}  x_i {3!s} ".format(sum, h0, self.y, x_i.T))
+
 		return sum.item(0)
 
 	def __h0_function(self, x):
 		ret = self.theta * x.T
 		ret = ret.T
 		return ret
+
+	def save_model(self):
+		return
+
+	def print_graphe(self):
+		for i in range(1, self.X_values_size):
+			plt.scatter([a[i] for a in self.X.tolist()], self.y)
+			plt.plot([a[i] for a in self.X.tolist()], self.y_prime)
+		plt.draw()
+		plt.pause(0.001)
+		# plt.show()
+		plt.close()
+
+	def print_wait_graphe(self):
+		for i in range(1, self.X_values_size):
+			plt.scatter([a[i] for a in self.X.tolist()], self.y)
+			plt.plot([a[i] for a in self.X.tolist()], self.y_prime)
+			# plt.draw()
+			# plt.pause(0.001)
+		plt.show()
+		plt.close()
 
 	def print_infos(self):
 		print("     self.data_test_x                 " + str(self.data_test_x))
@@ -220,10 +281,6 @@ class linearRegression:
 		print("     y_prime()                        " + str(self.y_prime))
 		if (self.options & SHOW_OPTION) != 0:
 			print(self.options & SHOW_OPTION)
+			self.print_wait_graphe()
 
-			for i in range(self.X_values_size):
-				plt.scatter([a[i] for a in self.X.tolist()], self.y)
-				plt.plot([a[i] for a in self.X.tolist()], self.y_prime)
-				plt.show()
-				plt.close()
 		return

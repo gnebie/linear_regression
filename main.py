@@ -19,6 +19,7 @@ def main():
 		lr.improve_data()
 		lr.calculate()
 		lr.print_infos()
+		lr.save_model()
 	except IOError:
 		print("Error when file tryed to be open")
 		exit(0)
