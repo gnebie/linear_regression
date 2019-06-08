@@ -25,53 +25,69 @@ NORMALIZE_AVREADGE = (NORMALIZE_MAX - NORMALIZE_MIN) / 2
 
 class dataset:
 	def __init__(self, datas, min, max, settings):
-		datas =
-
-		self.values = np.array([ [1.0] +  elem[1:] for elem in training_set], float)
-		self.goal = np.array([elem[0] for elem in training_set])
-		self.size = len(self.goal)
-
-		# self.invert_val = []
 
 		self.settings  = settings
+		random.shuffle(datas)
+
+		self.values = np.array([ [1.0] +  elem[1:] for elem in datas], float)
+		self.goal = np.array([elem[0] for elem in datas])
+		self.invert_val = self.values.T
+
+		self.size = len(self.goal)
+		self.values_size = len(self.values[0])
 
 
-		self.values_size = 0
-
-		self.min_val = min # to get
-		self.max_val = max # to get
+		self.min_val = min
+		self.max_val = max
 
 		self.stockaic_count = 0
-
 		self.stockaic_values_prepared = False
 
 
+	def update_stockaic_count(self):
+		self.stockaic_count += 1
+		if self.stockaic_count > self.settings["stochastic_gardient"]["stocastique_change"]:
+			self.stockaic_count = 0
 
 	def get_stocastik_value(self):
 		if self.stockaic_values_prepared == False:
 			return self.values
 		else:
-			return
+			return self.stockaic_values[self.stockaic_count]["values"]
 
-	def get_inverse_value(self):
+	def get_stocastik_inverse_value(self):
 		if self.stockaic_values_prepared == False:
 			return self.invert_val
 		else:
-			return
+			return self.stockaic_values[self.stockaic_count]["invert_values"]
+
+	def get_stocastik_goal(self):
+		if self.stockaic_values_prepared == False:
+			return self.goal
+		else:
+			return self.stockaic_values[self.stockaic_count]["goal"]
 
 
 	def prepare_stocastik_value(self):
 		self.stockaic_values_prepared = True
+		self.stockaic_values = []
+		pointeur = 0
+		count = 0
+		add = self.settings["stochastic_gardient"]["stochastic_gardient_size"]
+		# datas need to be shuffled in the init function
+		while count < self.settings["stochastic_gardient"]["stocastique_change"]:
+			self.stockaic_values.append({"values":self.values[pointeur:add + pointeur],"invert_values":self.invert_val[pointeur:add + pointeur], "goal":self.goal[pointeur:add + pointeur]})
+			count += 1
+			pointeur += add
+			if len(self.values[pointeur:add + pointeur]) == 0:
+				pointeur = 0
+			else:
+				pointeur += add
 
-
-
-	def normailize(self, datas):
-		data = datas.tolist()
-		# normailze value
+	def normalize(self):
+		data = self.values.tolist()
 		if (self.settings["normialize"]["status"] == True):
 			min_max = [elem1 - elem2 for elem1, elem2 in zip(self.max_val, self.min_val)]
-			# print(min_max)
-			# data = [ [ ((x[i] - self.min_X[i]) / min_max[i] * NORMALIZE_MAX) - NORMALIZE_MIN for i in range(len(x)) ] for x in data]
 			for x in data:
 				for i in range(len(x)):
 					if min_max[i] != 0:
@@ -80,14 +96,13 @@ class dataset:
 						x[i] = self.settings["normialize"]["max"]
 					if x[i] < self.settings["normialize"]["min"]:
 						x[i] = self.settings["normialize"]["min"]
-		# feature scaling
 			if (self.settings["feature_scaling"]):
 				data = [x[:1] + [elem - self.settings["normialize"]["avreadge"] for elem in x[1:]] for x in data]
 		elif (self.settings["feature_scaling"]):
 			for x in data:
 				for i in range(len(x)):
 					x[i] = x[i] - (self.max_val[i] - self.min_val[i] )
-		return (np.matrix(data, float))
+		self.values = np.matrix(data, float)
 
 
 class linearRegression:
@@ -103,10 +118,10 @@ class linearRegression:
 
 		self.X = None # matrice
 		self.X_values_size = 0
-		self.min_X = []
-		self.max_X = []
-		self.min_X_stop = None
-		self.max_X_stop = None
+		self.min_val = []
+		self.max_val = []
+		self.min_val_stop = None
+		self.max_val_stop = None
 		self.y = None # vecteur
 		self.training_set_size = 0;
 		self.alpha = settings["alpha"] # nombre
@@ -119,6 +134,7 @@ class linearRegression:
 			"name": "test_0",
 			"alpha":0.8,
 			"train_evaluate_split":0.8,
+			"evaluate_validate_split":0.5,
 			"limit_values":{
 				"min_status":False,
 				"max_status":False,
@@ -140,7 +156,7 @@ class linearRegression:
 			"show_steps":True,
 			"stochastic_gardient":{
 				"status":True,
-				"stochastic_gardient_max_size": 100,
+				"stochastic_gardient_size": 100,
 				"stocastique_change":10
 				},
 			"regularisation_L2":{ # w au carre / w == teta
@@ -195,7 +211,7 @@ class linearRegression:
 			add_datas = []
 			# if square
 			for elem in datas[1:]:
-				print(elem)
+				# print(elem)
 				total = elem * elem
 				add_datas.append(total)
 			# if cube
@@ -242,37 +258,47 @@ class linearRegression:
 		raw_datas = self.get_file(name) # panda?
 		#test the values
 		raw_datas = self.__test_the_values(raw_datas)
-		self.__prepare_datas(raw_datas)
+		self.__prepare_datas_for_training(raw_datas)
 		return
 
 	def __get_min_max(self, datas):
 		values_size = len(datas[0])
 		self.X_values_size = values_size
-		min_X = datas[0].copy()
-		max_X = datas[0].copy()
+		min_val = datas[0].copy()
+		max_val = datas[0].copy()
 		for x in datas:
 			for i in range(values_size):
 				index = i
-				if min_X[index] > x[i]:
-					min_X[index] = x[i]
-				if self.min_X_stop != None and min_X[index] < self.min_X_stop:
-					min_X[index] = self.min_X_stop
-				if max_X[index] < x[i]:
-					max_X[index] = x[i]
-				if self.max_X_stop != None and max_X[index] > self.max_X_stop:
-					max_X[index] = self.max_X_stop
-		min_X[0] = 1
-		max_X[0] = 1
-		return (min_X, max_X)
+				if min_val[index] > x[i]:
+					min_val[index] = x[i]
+				if self.min_val_stop != None and min_val[index] < self.min_val_stop:
+					min_val[index] = self.min_val_stop
+				if max_val[index] < x[i]:
+					max_val[index] = x[i]
+				if self.max_val_stop != None and max_val[index] > self.max_val_stop:
+					max_val[index] = self.max_val_stop
+		min_val[0] = 1
+		max_val[0] = 1
+		self.max_val = min_val
+		self.min_val = max_val
+		return (min_val, max_val)
 
 
-	def __prepare_datas(self, raw_datas):
+	def __prepare_datas_for_evaluation(self, raw_datas):
+		datas = raw_datas
+		datas = self.augment_datas(datas)
+		self.evaluate_set = dataset(datas, self.min_val, self.max_val, self.settings)
+		self.y_prime = range(self.evaluate_set.size)
+		self.evaluate_set.normalize()
+		return
+
+	def __prepare_datas_for_training(self, raw_datas):
 		datas = raw_datas
 
 		random.shuffle(datas)
-		datas = datas[:1000]
+		# datas = datas[:1000]
 		datas = self.augment_datas(datas)
-		# print("__prepare_datas begin")
+		# print("__prepare_datas_for_training begin")
 
 		data_size = len(datas)
 		min_vals, max_vals = self.__get_min_max(datas)
@@ -280,62 +306,54 @@ class linearRegression:
 		training_size = int(data_size * self.settings["train_evaluate_split"])
 
 		evaluate_size = data_size - training_size
+		validate_size = int(evaluate_size * self.settings["evaluate_validate_split"])
+		evaluate_size -= validate_size
 
 		self.training_set = dataset(datas[:training_size], min_vals, max_vals, self.settings)
-		self.evaluate_set = dataset(datas[training_size:], min_vals, max_vals, self.settings)
+		self.evaluate_set = dataset(datas[training_size:training_size + evaluate_size], min_vals, max_vals, self.settings)
+		self.validate_set = dataset(datas[training_size + evaluate_size:], min_vals, max_vals, self.settings)
 
-		# training_set = datas[:training_size]
-		# training_set.sort() # TODO usefull?
-
-		# training_set_goal = [elem[0] for elem in training_set]
-		# training_set_values = [ [1.0] +  elem[1:] for elem in training_set]
-
-		# evaluate_set = datas[training_size:]
-		# evaluate_set.sort() # TODO usefull?
-		# evaluate_set_goal = [elem[0] for elem in evaluate_set]
-		# evaluate_set_values = [[1.0] + elem[1:] for elem in evaluate_set]
-		# separe the values: training , evaluate
-		# print("values splited between eval and train")
-
-		# self.X = np.array(training_set_values, float)
-		# self.y = np.array(training_set_goal)
-		# self.training_set_size = len(self.y)
-
-		# self.data_test_x = np.array(evaluate_set_values, float) # matrice
-		# self.data_test_y = np.array(evaluate_set_goal) # vecteur
+		self.training_set.prepare_stocastik_value()
+		# print(self.training_set.get_stocastik_goal())
+		# print(self.training_set.get_stocastik_value())
+		# print(self.training_set.get_stocastik_inverse_value())
 
 		self.theta = np.array(range(self.X_values_size))
 		# random.shuffle(self.theta)
 		self.y_prime = range(self.training_set.size)
-		exit(1)
 
 	def improve_data(self):
-		self.X = self.__normalize(self.X)
-		self.data_test_x = self.__normalize(self.data_test_x)
+		# utile d'en faire une fonction :/
+		self.training_set.normalize()
+		self.evaluate_set.normalize()
+		self.validate_set.normalize()
+		# self.X = self.__normalize(self.X)
+		# self.data_test_x = self.__normalize(self.data_test_x)
+		exit(1)
 
-	def __normalize(self, datas):
-		data = datas.tolist()
-		# normailze value
-		if (self.options & NORMALIZE):
-			min_max = [elem1 - elem2 for elem1, elem2 in zip(self.max_X, self.min_X)]
-			# print(min_max)
-			# data = [ [ ((x[i] - self.min_X[i]) / min_max[i] * NORMALIZE_MAX) - NORMALIZE_MIN for i in range(len(x)) ] for x in data]
-			for x in data:
-				for i in range(len(x)):
-					if min_max[i] != 0:
-						x[i] = ((x[i] - self.min_X[i]) / min_max[i] * NORMALIZE_MAX) - NORMALIZE_MIN
-					if x[i] > NORMALIZE_MAX:
-						x[i] = NORMALIZE_MAX
-					if x[i] < NORMALIZE_MIN:
-						x[i] = NORMALIZE_MIN
-		# feature scaling
-			if (self.options & FEATURE_SCALING):
-				data = [x[:1] + [elem - NORMALIZE_AVREADGE for elem in x[1:]] for x in data]
-		elif (self.options & FEATURE_SCALING):
-			for x in data:
-				for i in range(len(x)):
-					x[i] = x[i] - (self.max_X[i] - self.min_X[i] )
-		return (np.matrix(data, float))
+	# def __normalize(self, datas):
+	# 	data = datas.tolist()
+	# 	# normailze value
+	# 	if (self.options & NORMALIZE):
+	# 		min_max = [elem1 - elem2 for elem1, elem2 in zip(self.max_val, self.min_val)]
+	# 		# print(min_max)
+	# 		# data = [ [ ((x[i] - self.min_val[i]) / min_max[i] * NORMALIZE_MAX) - NORMALIZE_MIN for i in range(len(x)) ] for x in data]
+	# 		for x in data:
+	# 			for i in range(len(x)):
+	# 				if min_max[i] != 0:
+	# 					x[i] = ((x[i] - self.min_val[i]) / min_max[i] * NORMALIZE_MAX) - NORMALIZE_MIN
+	# 				if x[i] > NORMALIZE_MAX:
+	# 					x[i] = NORMALIZE_MAX
+	# 				if x[i] < NORMALIZE_MIN:
+	# 					x[i] = NORMALIZE_MIN
+	# 	# feature scaling
+	# 		if (self.options & FEATURE_SCALING):
+	# 			data = [x[:1] + [elem - NORMALIZE_AVREADGE for elem in x[1:]] for x in data]
+	# 	elif (self.options & FEATURE_SCALING):
+	# 		for x in data:
+	# 			for i in range(len(x)):
+	# 				x[i] = x[i] - (self.max_val[i] - self.min_val[i] )
+	# 	return (np.matrix(data, float))
 
 	def get_evaluation(self, values):
 		return [ self.__h0_function(x).item(0) for x in values ]
@@ -411,7 +429,7 @@ class linearRegression:
 		# self.max
 		# self theta
 		# ;
-		data = { "min":self.min_X, "max":self.max_X, "theta":self.theta, "options":self.options, "settings": self.settings, "X_values_size": self.X_values_size}
+		data = { "min":self.min_val, "max":self.max_val, "theta":self.theta, "options":self.options, "settings": self.settings, "X_values_size": self.X_values_size}
 		try:
 			with open(self.settings["name"] + '_save.json', 'w') as outfile:
 				json.dump(data, outfile)
@@ -428,8 +446,8 @@ class linearRegression:
 			exit(0)
 		self.settings = data["settings"]
 		self.alpha = data["settings"]["alpha"]
-		self.min_X = data["min"]
-		self.max_X = data["max"]
+		self.min_val = data["min"]
+		self.max_val = data["max"]
 		self.theta = data["theta"]
 		self.options = data["options"]
 		self.X_values_size = data["X_values_size"]
@@ -471,8 +489,8 @@ class linearRegression:
 		print("     np.max(self.y)                   " + str(np.max(self.y)))
 		print("     np.mean(self.y)                  " + str(np.mean(self.y)))
 		print("     theta(self.y)                    " + str(self.theta))
-		print("     total_min()                      " + str(self.min_X))
-		print("     total_max()                      " + str(self.max_X))
+		print("     total_min()                      " + str(self.min_val))
+		print("     total_max()                      " + str(self.max_val))
 		print("     y_prime()                        " + str(self.y_prime))
 		if (self.options & SHOW_OPTION) != 0:
 			print(self.options & SHOW_OPTION)
