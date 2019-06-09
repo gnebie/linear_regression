@@ -8,13 +8,13 @@ import json
 
 
 
-FEATURE_SCALING = 1
-NORMALIZE = 0b10
-SHOW_OPTION = 0b100
-
-NORMALIZE_MIN = 0.0
-NORMALIZE_MAX = 1.0
-NORMALIZE_AVREADGE = (NORMALIZE_MAX - NORMALIZE_MIN) / 2
+# FEATURE_SCALING = 1
+# NORMALIZE = 0b10
+# SHOW_OPTION = 0b100
+#
+# NORMALIZE_MIN = 0.0
+# NORMALIZE_MAX = 1.0
+# NORMALIZE_AVREADGE = (NORMALIZE_MAX - NORMALIZE_MIN) / 2
 
 # data goal must be the first colone of a matrice
 
@@ -44,10 +44,24 @@ class dataset:
 		self.stockaic_values_prepared = False
 
 
-	def update_stockaic_count(self):
-		self.stockaic_count += 1
-		if self.stockaic_count > self.settings["stochastic_gardient"]["stocastique_change"]:
-			self.stockaic_count = 0
+	def update_stockaic_count(self, i, size):
+		# print(self.settings["stochastic_gardient"]["stocastique_change"] / size * i)
+		if i != 0 and self.settings["stochastic_gardient"]["stocastique_change"] * i % size == 0:
+			self.stockaic_count += 1
+			# print("update self.stockaic_count  " + str(self.stockaic_count))
+			# print(self.stockaic_values[self.stockaic_count])
+			if self.stockaic_count >= self.settings["stochastic_gardient"]["stocastique_change"]:
+				self.stockaic_count = 0
+
+	def get_value(self):
+		return self.values
+
+	def get_inverse_value(self):
+		return self.invert_val
+
+	def get_goal(self):
+		return self.goal
+
 
 	def get_stocastik_value(self):
 		if self.stockaic_values_prepared == False:
@@ -67,8 +81,9 @@ class dataset:
 		else:
 			return self.stockaic_values[self.stockaic_count]["goal"]
 
-
 	def prepare_stocastik_value(self):
+		if (self.stockaic_values_prepared) ==  True:
+			return
 		self.stockaic_values_prepared = True
 		self.stockaic_values = []
 		pointeur = 0
@@ -76,13 +91,12 @@ class dataset:
 		add = self.settings["stochastic_gardient"]["stochastic_gardient_size"]
 		# datas need to be shuffled in the init function
 		while count < self.settings["stochastic_gardient"]["stocastique_change"]:
-			self.stockaic_values.append({"values":self.values[pointeur:add + pointeur],"invert_values":self.invert_val[pointeur:add + pointeur], "goal":self.goal[pointeur:add + pointeur]})
+			self.stockaic_values.append({"values":self.values[pointeur:add + pointeur],"invert_values":self.values[pointeur:add + pointeur].T, "goal":self.goal[pointeur:add + pointeur]})
 			count += 1
 			pointeur += add
-			if len(self.values[pointeur:add + pointeur]) == 0:
+			if len(self.goal[pointeur:add + pointeur]) == 0:
 				pointeur = 0
-			else:
-				pointeur += add
+
 
 	def normalize(self):
 		data = self.values.tolist()
@@ -103,6 +117,7 @@ class dataset:
 				for i in range(len(x)):
 					x[i] = x[i] - (self.max_val[i] - self.min_val[i] )
 		self.values = np.matrix(data, float)
+		self.invert_val = self.values.T
 
 
 class linearRegression:
@@ -110,7 +125,6 @@ class linearRegression:
 
 		self.settings = self.set_settings(settings)
 
-		self.options =  NORMALIZE | FEATURE_SCALING | SHOW_OPTION
 		self.data_test = None
 		self.data_train = None
 		self.data_test_x = None # matrice
@@ -140,6 +154,11 @@ class linearRegression:
 				"max_status":False,
 				"min_limit":[0],
 				"max_limit":[0]
+			},
+			"data_augment":{
+				"square":False,
+				"cube":False,
+				"convolutionals_values":False
 			},
 			"feature_scaling":True,
 			"normialize":{
@@ -207,25 +226,29 @@ class linearRegression:
 
 	def augment_datas(self, data_total):
 		new_total = []
+
 		for datas in data_total:
 			add_datas = []
 			# if square
-			for elem in datas[1:]:
-				# print(elem)
-				total = elem * elem
-				add_datas.append(total)
+			if self.settings["data_augment"]["square"]:
+				for elem in datas[1:]:
+					# print(elem)
+					total = elem * elem
+					add_datas.append(total)
 			# if cube
-			for elem in datas[1:]:
-				add_datas.append(elem * elem * elem)
+			if self.settings["data_augment"]["cube"]:
+				for elem in datas[1:]:
+					add_datas.append(elem * elem * elem)
 			# if convolutionals values
-			i = 0
-			for elem1 in datas[1:]:
-				j = 0
-				for elem2 in datas[1:]:
-					if j != i:
-						add_datas.append(elem1 * elem2)
-					j+= 1
-				i += 1
+			if self.settings["data_augment"]["convolutionals_values"]:
+				i = 0
+				for elem1 in datas[1:]:
+					j = 0
+					for elem2 in datas[1:]:
+						if j != i:
+							add_datas.append(elem1 * elem2)
+						j+= 1
+					i += 1
 			new_total.append(datas + add_datas)
 		return new_total
 
@@ -313,11 +336,6 @@ class linearRegression:
 		self.evaluate_set = dataset(datas[training_size:training_size + evaluate_size], min_vals, max_vals, self.settings)
 		self.validate_set = dataset(datas[training_size + evaluate_size:], min_vals, max_vals, self.settings)
 
-		self.training_set.prepare_stocastik_value()
-		# print(self.training_set.get_stocastik_goal())
-		# print(self.training_set.get_stocastik_value())
-		# print(self.training_set.get_stocastik_inverse_value())
-
 		self.theta = np.array(range(self.X_values_size))
 		# random.shuffle(self.theta)
 		self.y_prime = range(self.training_set.size)
@@ -327,78 +345,74 @@ class linearRegression:
 		self.training_set.normalize()
 		self.evaluate_set.normalize()
 		self.validate_set.normalize()
-		# self.X = self.__normalize(self.X)
-		# self.data_test_x = self.__normalize(self.data_test_x)
-		exit(1)
 
-	# def __normalize(self, datas):
-	# 	data = datas.tolist()
-	# 	# normailze value
-	# 	if (self.options & NORMALIZE):
-	# 		min_max = [elem1 - elem2 for elem1, elem2 in zip(self.max_val, self.min_val)]
-	# 		# print(min_max)
-	# 		# data = [ [ ((x[i] - self.min_val[i]) / min_max[i] * NORMALIZE_MAX) - NORMALIZE_MIN for i in range(len(x)) ] for x in data]
-	# 		for x in data:
-	# 			for i in range(len(x)):
-	# 				if min_max[i] != 0:
-	# 					x[i] = ((x[i] - self.min_val[i]) / min_max[i] * NORMALIZE_MAX) - NORMALIZE_MIN
-	# 				if x[i] > NORMALIZE_MAX:
-	# 					x[i] = NORMALIZE_MAX
-	# 				if x[i] < NORMALIZE_MIN:
-	# 					x[i] = NORMALIZE_MIN
-	# 	# feature scaling
-	# 		if (self.options & FEATURE_SCALING):
-	# 			data = [x[:1] + [elem - NORMALIZE_AVREADGE for elem in x[1:]] for x in data]
-	# 	elif (self.options & FEATURE_SCALING):
-	# 		for x in data:
-	# 			for i in range(len(x)):
-	# 				x[i] = x[i] - (self.max_val[i] - self.min_val[i] )
-	# 	return (np.matrix(data, float))
+		self.training_set.prepare_stocastik_value()
 
-	def get_evaluation(self, values):
-		return [ self.__h0_function(x).item(0) for x in values ]
+	def get_evaluation(self, data_set):
+
+		values = data_set.get_stocastik_value()
+		return [ self.__h0_function(x.T).item(0) for x in values ]
 
 	def calculate(self):
-		old_cost = self.__cost_function(self.X, self.y)
-		for i in range(200):
+		# need to redefine the cost function #pointeur sur fonction
+		old_cost = self.__cost_function(self.training_set)
+		min_size = self.settings["gardient_descent"]["min_iteration"]
+		max_size = self.settings["gardient_descent"]["max_iteration"]
+		for i in range(max_size):
+			# get the values
+			# print(i)
+
 			self.__gradient_descent()
-			new_cost = self.__cost_function(self.X, self.y)
+			new_cost = self.__cost_function(self.training_set)
+			if old_cost < new_cost : # TODO useful?
+				print("non convertion, alpha maybe to big")
+				# exit(1)
+			elif i > min_size and old_cost >= new_cost and old_cost - new_cost < self.settings["gardient_descent"]["min_delta"]:
+				print("what a break!")
+				print(old_cost)
+				print(new_cost)
+				break
 			old_cost = new_cost
 			if i % 10 == 0:
-				self.y_prime = self.get_evaluation(self.X)
+				self.y_prime = self.get_evaluation(self.training_set)
 				self.print_graphe()
-			# exit(0)
+				# time.sleep(1)
+			self.training_set.update_stockaic_count(i, max_size)
+			# update the stockastique
 		self.test_set()
 		return
 
 	def test_set(self):
-		print("test : " + str(self.data_test_x))
-		print("wait : " + str(self.data_test_y))
-		print(self.__h0_function(self.data_test_x))
-		print("cost " + str(self.__cost_function(self.data_test_x, self.data_test_y) ))
+		print("cost " + str(self.__cost_function(self.evaluate_set) ))
+		print("theta " + str(self.theta ))
 
 
-	def __cost_function(self, x, y):
-		sum = self.__cost_function_square_sum(x, y)
-		cost_func = sum / (2 * len(y))
+	def __cost_function(self, data_set):
+		y = data_set.get_stocastik_goal()
+
+		sum = self.__cost_function_square_sum(data_set)
+		cost_func = sum / (2 * len(y)) # faire une fonction ? utile ? pas besoin de recalculer chaque fois
 		return cost_func
 
-	def __cost_function_square_sum(self, x, y):
+	def __cost_function_square_sum(self, data_set):
+		x = data_set.get_stocastik_value()
+		y = data_set.get_stocastik_goal()
+		z = data_set.get_stocastik_inverse_value()
 		sum = 0
-		h0 = self.__h0_function(x)
+		h0 = self.__h0_function(z)
 		for hx, y_elem in zip(h0, y):
 			sum += (hx - y_elem) * (hx - y_elem)
 		return sum
 
 	def __gradient_descent(self):
 		tmp_theta = []
-		cost_func = self.__cost_function(self.X, self.y)
+		cost_func = self.__cost_function(self.training_set)
 		i = 0
 		# print("self.theta {0!s} X {1!s}".format(self.theta, self.X.T))
-		for theta, x_i in zip(self.theta, self.X.T):
+		for theta, x_i in zip(self.theta, self.training_set.get_stocastik_inverse_value()):
 			# print("theta {0!s}  x_i {1!s}".format(theta, x_i))
 			i += 1
-			tmp_theta.append(theta - (self.alpha * self.__gradient_descent_square_sum(x_i) / self.training_set_size))
+			tmp_theta.append(theta - (self.alpha * self.__gradient_descent_square_sum(x_i) / self.training_set.size))
 		# print(tmp_theta)
 		# print(self.__cost_function(self.X, self.y))
 		# time.sleep(1)
@@ -408,10 +422,10 @@ class linearRegression:
 
 	def __gradient_descent_square_sum(self, x_i):
 		sum = 0
-		h0 = self.__h0_function(self.X)
+		h0 = self.__h0_function(self.training_set.get_stocastik_inverse_value())
 		# print("\n*********************************")
 		# for  in x_i.T:
-		for x_elem, hx, y_elem in zip(x_i.tolist()[0], h0, self.y):
+		for x_elem, hx, y_elem in zip(x_i.tolist()[0], h0, self.training_set.get_stocastik_goal()):
 			sum += (hx - y_elem) * x_elem
 			# print("sum {0!s}  hx {1!s} y {2!s}  x {3!s} ".format(sum, hx, y_elem, x_elem))
 		# print("sum {0!s}  h0 {1!s} y_ {2!s}  x_i {3!s} ".format(sum, h0, self.y, x_i.T))
@@ -419,8 +433,10 @@ class linearRegression:
 		return sum.item(0)
 
 	def __h0_function(self, x):
-		ret = self.theta * x.T
+		# print("*****************************************************                        ici")
+		ret = self.theta * x
 		ret = ret.T
+		# print("*****************************************************                        la")
 		return ret
 
 	def save_model(self):
@@ -429,7 +445,7 @@ class linearRegression:
 		# self.max
 		# self theta
 		# ;
-		data = { "min":self.min_val, "max":self.max_val, "theta":self.theta, "options":self.options, "settings": self.settings, "X_values_size": self.X_values_size}
+		data = { "min":self.min_val, "max":self.max_val, "theta":self.theta, "settings": self.settings, "X_values_size": self.X_values_size}
 		try:
 			with open(self.settings["name"] + '_save.json', 'w') as outfile:
 				json.dump(data, outfile)
@@ -449,15 +465,14 @@ class linearRegression:
 		self.min_val = data["min"]
 		self.max_val = data["max"]
 		self.theta = data["theta"]
-		self.options = data["options"]
 		self.X_values_size = data["X_values_size"]
 		return
 
 
 	def print_graphe(self):
 		for i in range(1, self.X_values_size):
-			plt.scatter([a[i] for a in self.X.tolist()], self.y)
-			plt.plot([a[i] for a in self.X.tolist()], self.y_prime)
+			plt.scatter([a[i] for a in self.training_set.get_stocastik_value().tolist()], self.training_set.get_stocastik_goal())
+			plt.plot([a[i] for a in self.training_set.get_stocastik_value().tolist()], self.y_prime)
 		plt.draw()
 		plt.pause(0.001)
 		# plt.show()
@@ -467,9 +482,9 @@ class linearRegression:
 		merge = []
 		self.y_prime = self.get_evaluation(self.X)
 		for i in range(1, self.X_values_size):
-			plt.scatter([a[i] for a in self.X.tolist()], self.y)
+			plt.scatter([a[i] for a in self.training_set.get_stocastik_value().tolist()], self.y)
 			plt.draw()
-			plt.plot([a[i] for a in self.X.tolist()], self.y_prime, 'g')
+			plt.plot([a[i] for a in self.training_set.get_stocastik_value().tolist()], self.y_prime, 'g')
 			# plt.pause(0.001)
 			plt.show()
 		plt.close()
