@@ -44,6 +44,8 @@ def main():
 	try:
 		args = parse_program_args()
 
+		args.file_name = "~/goinfre/download/calcofi/parsed_bottle.csv"
+		args.file_name = "~/goinfre/download/calcofi/tmp_small_bottle.csv"
 		args.file_name = "~/goinfre/download/calcofi/parsed_bottle2.csv"
 		settings = {}
 		try:
@@ -52,7 +54,7 @@ def main():
 			print("Error when setting try to be open")
 		lr = linearRegression.linearRegression(args.options, settings)
 		create_model(lr, args)
-		get_model(lr, args)
+		# get_model(lr, args)
 
 	except IOError:
 		print("Error when file tryed to be open")

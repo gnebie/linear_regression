@@ -155,11 +155,6 @@ class linearRegression:
 				"min_limit":[0],
 				"max_limit":[0]
 			},
-			"data_augment":{
-				"square":False,
-				"cube":False,
-				"convolutionals_values":False
-			},
 			"feature_scaling":True,
 			"normialize":{
 				"status":True,
@@ -230,17 +225,17 @@ class linearRegression:
 		for datas in data_total:
 			add_datas = []
 			# if square
-			if self.settings["data_augment"]["square"]:
+			if self.settings["extend_values"]["square"]:
 				for elem in datas[1:]:
 					# print(elem)
 					total = elem * elem
 					add_datas.append(total)
 			# if cube
-			if self.settings["data_augment"]["cube"]:
+			if self.settings["extend_values"]["cube"]:
 				for elem in datas[1:]:
 					add_datas.append(elem * elem * elem)
 			# if convolutionals values
-			if self.settings["data_augment"]["convolutionals_values"]:
+			if self.settings["extend_values"]["crossed_values"]:
 				i = 0
 				for elem1 in datas[1:]:
 					j = 0
@@ -440,7 +435,6 @@ class linearRegression:
 		return ret
 
 	def save_model(self):
-		# self.options (normalise feature_scalings)
 		# self.min
 		# self.max
 		# self theta
@@ -472,7 +466,13 @@ class linearRegression:
 	def print_graphe(self):
 		for i in range(1, self.X_values_size):
 			plt.scatter([a[i] for a in self.training_set.get_stocastik_value().tolist()], self.training_set.get_stocastik_goal())
-			plt.plot([a[i] for a in self.training_set.get_stocastik_value().tolist()], self.y_prime)
+			plot_list = [a[i] for a in self.training_set.get_stocastik_value().tolist()]
+			plot_list2 = plot_list.copy()
+			# plot_list.sort(reverse=True)
+			plot_second_list = self.y_prime.copy()
+			# plot_second_list.sort(reverse=True)
+			# plt.plot(plot_list, plot_second_list)
+			plt.scatter(plot_list2, self.y_prime)
 		plt.draw()
 		plt.pause(0.001)
 		# plt.show()
@@ -480,35 +480,36 @@ class linearRegression:
 
 	def print_wait_graphe(self):
 		merge = []
-		self.y_prime = self.get_evaluation(self.X)
+		y_prime_validate_set = self.get_evaluation(self.validate_set)
 		for i in range(1, self.X_values_size):
-			plt.scatter([a[i] for a in self.training_set.get_stocastik_value().tolist()], self.y)
-			plt.draw()
-			plt.plot([a[i] for a in self.training_set.get_stocastik_value().tolist()], self.y_prime, 'g')
+			plt.scatter([a[i] for a in self.validate_set.get_value().tolist()], self.validate_set.get_goal())
+			# plt.draw()
+			plt.plot([a[i] for a in self.validate_set.get_value().tolist()], y_prime_validate_set, 'g')
+			# plt.scatter([a[i] for a in self.validate_set.get_value().tolist()], y_prime_validate_set, 'g')
 			# plt.pause(0.001)
 			plt.show()
 		plt.close()
 
 	def print_infos(self):
-		self.y_prime = self.get_evaluation(self.X)
-		print("     self.data_test_x                 " + str(self.data_test_x))
-		print("     self.data_test_y                 " + str(self.data_test_y))
-		print("     self.X                           " + str(self.X))
-		print("     self.y                           " + str(self.y))
+		self.y_prime = self.get_evaluation(self.training_set)
+		# print("     self.data_test_x                 " + str(self.data_test_x))
+		# print("     self.data_test_y                 " + str(self.data_test_y))
+		# print("     self.X                           " + str(self.X))
+		# print("     self.y                           " + str(self.y))
 		print("     self.training_set_size           " + str(self.training_set_size))
 		print("     self.alpha                       " + str(self.alpha))
-		print("     np.min(self.X)                   " + str(np.min(self.X)))
-		print("     np.max(self.X)                   " + str(np.max(self.X)))
-		print("     np.mean(self.X)                  " + str(np.mean(self.X)))
-		print("     np.min(self.y)                   " + str(np.min(self.y)))
-		print("     np.max(self.y)                   " + str(np.max(self.y)))
-		print("     np.mean(self.y)                  " + str(np.mean(self.y)))
+		# print("     np.min(self.X)                   " + str(np.min(self.X)))
+		# print("     np.max(self.X)                   " + str(np.max(self.X)))
+		# print("     np.mean(self.X)                  " + str(np.mean(self.X)))
+		# print("     np.min(self.y)                   " + str(np.min(self.y)))
+		# print("     np.max(self.y)                   " + str(np.max(self.y)))
+		# print("     np.mean(self.y)                  " + str(np.mean(self.y)))
 		print("     theta(self.y)                    " + str(self.theta))
 		print("     total_min()                      " + str(self.min_val))
 		print("     total_max()                      " + str(self.max_val))
 		print("     y_prime()                        " + str(self.y_prime))
-		if (self.options & SHOW_OPTION) != 0:
-			print(self.options & SHOW_OPTION)
-			self.print_wait_graphe()
+		# if (self.options & SHOW_OPTION) != 0:
+		# 	print(self.options & SHOW_OPTION)
+		self.print_wait_graphe()
 
 		return
