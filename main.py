@@ -17,7 +17,6 @@ def parse_program_args():
 	parser = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter)
 	parser.add_argument("file_name", help="File path of the wiki object you find from https://dumps.wikimedia.org/frwiki/latest/")
 	parser.add_argument("type", type=int, default=0, help="type")
-	parser.add_argument("options", type=int, default=0, help="options")
 	return parser.parse_args()
 
 def create_model(lr, args):
@@ -45,14 +44,14 @@ def main():
 		args = parse_program_args()
 
 		args.file_name = "~/goinfre/download/calcofi/parsed_bottle.csv"
-		args.file_name = "~/goinfre/download/calcofi/tmp_small_bottle.csv"
 		args.file_name = "~/goinfre/download/calcofi/parsed_bottle2.csv"
+		args.file_name = "~/goinfre/download/calcofi/tmp_small_bottle.csv"
 		settings = {}
 		try:
 			settings = get_settings()
 		except IOError:
 			print("Error when setting try to be open")
-		lr = linearRegression.linearRegression(args.options, settings)
+		lr = linearRegression.linearRegression(settings)
 		create_model(lr, args)
 		# get_model(lr, args)
 

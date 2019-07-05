@@ -97,7 +97,6 @@ class dataset:
 			if len(self.goal[pointeur:add + pointeur]) == 0:
 				pointeur = 0
 
-
 	def normalize(self):
 		data = self.values.tolist()
 		if (self.settings["normialize"]["status"] == True):
@@ -121,7 +120,7 @@ class dataset:
 
 
 class linearRegression:
-	def __init__(self, options, settings):
+	def __init__(self, settings):
 
 		self.settings = self.set_settings(settings)
 
@@ -163,8 +162,19 @@ class linearRegression:
 				"max":1.0
 			},
 			"extend_values":{
+				"raw_value":True,
 				"square":True,
+				"absolute":True, #cant be use for the moment ou alors aougment passe apres normailize
 				"cube":True,
+				"expodential":True,
+				"log_nep":True,
+				"sin":True,
+				"cos":True,
+				"square_root":True,
+				"inv":True,
+				"square_inv":True,
+				"cube_inv":True,
+				"square_root_inv":True,
 				"crossed_values":True
 			},
 			"show_steps":True,
@@ -227,13 +237,41 @@ class linearRegression:
 			# if square
 			if self.settings["extend_values"]["square"]:
 				for elem in datas[1:]:
-					# print(elem)
-					total = elem * elem
-					add_datas.append(total)
+					add_datas.append(elem * elem)
 			# if cube
 			if self.settings["extend_values"]["cube"]:
 				for elem in datas[1:]:
 					add_datas.append(elem * elem * elem)
+			if self.settings["extend_values"]["absolute"]:
+				for elem in datas[1:]:
+					add_datas.append(elem if elem >= 0 else -1 * elem)
+			if self.settings["extend_values"]["expodential"]:
+				for elem in datas[1:]:
+					add_datas.append(math.exp(elem))
+			if self.settings["extend_values"]["log_nep"]:
+				for elem in datas[1:]:
+					add_datas.append(math.log(elem))
+			if self.settings["extend_values"]["sin"]:
+				for elem in datas[1:]:
+					add_datas.append(math.sin(elem))
+			if self.settings["extend_values"]["cos"]:
+				for elem in datas[1:]:
+					add_datas.append(math.cos(elem))
+			if self.settings["extend_values"]["square_root"]:
+				for elem in datas[1:]:
+					add_datas.append(math.sqrt(elem))
+			if self.settings["extend_values"]["inv"]:
+				for elem in datas[1:]:
+					add_datas.append(0 if elem == 0 else 1 / elem)
+			if self.settings["extend_values"]["square_inv"]:
+				for elem in datas[1:]:
+					add_datas.append(0 if elem == 0 else 1 / (elem * elem))
+			if self.settings["extend_values"]["cube_inv"]:
+				for elem in datas[1:]:
+					add_datas.append(0 if elem == 0 else 1 / (elem*elem*elem))
+			if self.settings["extend_values"]["square_root_inv"]:
+				for elem in datas[1:]:
+					add_datas.append(0 if elem == 0 else 1 / math.sqrt(elem))
 			# if convolutionals values
 			if self.settings["extend_values"]["crossed_values"]:
 				i = 0
@@ -244,7 +282,10 @@ class linearRegression:
 							add_datas.append(elem1 * elem2)
 						j+= 1
 					i += 1
-			new_total.append(datas + add_datas)
+			if len(add_datas) == 0 or self.settings["extend_values"]["raw_value"]:
+				new_total.append(datas + add_datas)
+			else:
+				new_total.append(datas[:1] + add_datas)
 		return new_total
 
 	def __test_the_values(self, datas):
@@ -481,7 +522,11 @@ class linearRegression:
 	def print_wait_graphe(self):
 		merge = []
 		y_prime_validate_set = self.get_evaluation(self.validate_set)
+		# y_prime_validate_set.sort()
 		for i in range(1, self.X_values_size):
+			plt.xlabel(self.etiquettes[i])
+			plt.ylabel("y value")
+			plt.legend(loc='upper left')
 			plt.scatter([a[i] for a in self.validate_set.get_value().tolist()], self.validate_set.get_goal())
 			# plt.draw()
 			plt.plot([a[i] for a in self.validate_set.get_value().tolist()], y_prime_validate_set, 'g')
